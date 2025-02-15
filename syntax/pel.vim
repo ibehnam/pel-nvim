@@ -2,36 +2,87 @@ if exists("b:current_syntax")
   finish
 endif
 
-" 1. Match semicolon comments
+" ─────────────────────────────────────────────────────────────────────────
+" 0) Auto‐reload syntax when you change color schemes
+"    This ensures that if you do :colorscheme <something>, your custom
+"    Pel syntax won’t disappear.
+" ─────────────────────────────────────────────────────────────────────────
+augroup pel_auto_reload
+  autocmd!
+  autocmd ColorScheme * if &filetype ==# 'pel' | runtime! syntax/pel.vim | endif
+augroup END
+
+" ─────────────────────────────────────────────────────────────────────────
+" 1) Comments (leading semicolon)
+" ─────────────────────────────────────────────────────────────────────────
 syntax match pelComment /;.*$/
-highlight link pelComment Comment
+highlight default link pelComment Comment
 
-" 2. Match double‐quoted strings
+" ─────────────────────────────────────────────────────────────────────────
+" 2) Strings in double quotes
+" ─────────────────────────────────────────────────────────────────────────
 syntax match pelString /"[^"]*"/
-highlight link pelString String
+highlight default link pelString String
 
-" 3. Match numbers (int or float, possibly negative)
+" ─────────────────────────────────────────────────────────────────────────
+" 3) Numeric literals (int or float, possibly negative)
+" ─────────────────────────────────────────────────────────────────────────
 syntax match pelNumber /\v-?\d+(\.\d+)?/
-highlight link pelNumber Number
+highlight default link pelNumber Number
 
-" 4. Highlight pipes (|>)
+" ─────────────────────────────────────────────────────────────────────────
+" 4) Pipe operator
+" ─────────────────────────────────────────────────────────────────────────
 syntax match pelPipe /\|>/
-highlight link pelPipe Operator
+highlight default link pelPipe Operator
 
-" 5. Highlight brackets as delimiters
-syntax match pelBracket /[[\]]/
-highlight link pelBracket Delimiter
-" Similarly for parentheses if you want:
+" ─────────────────────────────────────────────────────────────────────────
+" 5) Brackets and parentheses themselves as Delimiters
+" ─────────────────────────────────────────────────────────────────────────
+syntax match pelBracket /[\[\]]/
+highlight default link pelBracket Delimiter
+
 syntax match pelParen /[()]/
-highlight link pelParen Delimiter
+highlight default link pelParen Delimiter
 
-" 6. Highlight “keys” that start with a colon, e.g. :x, :foo
-syntax match pelKey /:[A-Za-z0-9_]+/
-highlight link pelKey Identifier
+" ─────────────────────────────────────────────────────────────────────────
+" 6) Keywords (e.g. def, lambda) vs. builtins (e.g. print)
+" ─────────────────────────────────────────────────────────────────────────
+syntax keyword pelKeyword def lambda let do if for while case
+highlight default link pelKeyword Keyword
 
-" 7. Some example keywords or builtins in Pel:
-syntax keyword pelKeyword def lambda do if for while case let
-highlight link pelKeyword Keyword
+syntax keyword pelBuiltin print eq map filter reduce apply
+highlight default link pelBuiltin Function
 
-" 8. Done
+" ─────────────────────────────────────────────────────────────────────────
+" 7) Keys of the form :xyz
+" ─────────────────────────────────────────────────────────────────────────
+syntax match pelKey /:[A-Za-z_][A-Za-z0-9_]*/
+highlight default link pelKey Identifier
+
+" ─────────────────────────────────────────────────────────────────────────
+" 8) Parenthesis‐based expressions
+"
+"    We define two regions:
+"    • pelParenExpr, for everything between "(" and ")"
+"    • pelBracketExpr, for everything between "[" and "]"
+" 
+"    Inside these are allowed to contain our tokens: comments, strings,
+"    numbers, keys, pipe, builtins, keywords, etc.
+"    
+"    We also highlight the first symbol after "(" specially as pelFirstSymbol.
+" ─────────────────────────────────────────────────────────────────────────
+syntax region pelParenExpr start="(" end=")" contains=pelComment,pelString,pelNumber,pelKey,pelPipe,pelBuiltin,pelKeyword,pelFirstSymbol
+highlight default link pelParenExpr None
+
+syntax region pelBracketExpr start="\[" end="\]" contains=pelComment,pelString,pelNumber,pelKey,pelPipe,pelBuiltin,pelKeyword
+highlight default link pelBracketExpr None
+
+" 8a) The "first symbol" after "(" gets a special highlight
+"     (print i) => "print" is pelFirstSymbol
+"     We use a lookbehind to capture the token right after "(".
+syntax match pelFirstSymbol /\v(?<=\()[ \t]*[^\ \t()]+/ contained
+highlight default link pelFirstSymbol Special
+
+" Mark that we have loaded Pel syntax
 let b:current_syntax = "pel"
